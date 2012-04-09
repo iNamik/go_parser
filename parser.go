@@ -1,7 +1,7 @@
 package parser
 
-import "github.com/iNamik/lexer.go"
-import "github.com/iNamik/container.go/queue"
+import "github.com/iNamik/go_lexer"
+import "github.com/iNamik/go_container/queue"
 
 // StateFn represents the state of the parser as a function that returns the next state.
 type StateFn func(Parser) StateFn

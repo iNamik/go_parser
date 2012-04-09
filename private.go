@@ -1,7 +1,7 @@
 package parser
 
-import "github.com/iNamik/lexer.go"
-import "github.com/iNamik/container.go/queue"
+import "github.com/iNamik/go_lexer"
+import "github.com/iNamik/go_container/queue"
 
 type parser struct {
 	lex       lexer.Lexer

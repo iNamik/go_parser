@@ -1,4 +1,4 @@
-parser.go
+go_parser
 =========
 
 **Parser API in Go**
@@ -7,7 +7,7 @@ parser.go
 ABOUT
 -----
 
-The 'parser.go' package is an API to help you create hand-written lexers and parsers.
+The 'go_parser' package is an API to help you create hand-written lexers and parsers.
 
 The package was inspired by Rob Pikes' video [Lexical Scanning In Go](http://youtu.be/HxaD_trXwRE) and golang's 'template' package.
 
@@ -103,8 +103,8 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 		"strconv"
 		"bufio"
 		"fmt"
-		"github.com/iNamik/lexer.go"
-		"github.com/iNamik/parser.go"
+		"github.com/iNamik/go_lexer"
+		"github.com/iNamik/go_parser"
 	)
 
 	// We define our lexer tokens starting from the pre-defined EOF token
@@ -393,23 +393,23 @@ INSTALL
 
 To install the package manually
 
-	git clone https://github.com/iNamik/parser.go
-	cd parser.go
+	git clone https://github.com/iNamik/go_parser
+	cd go_parser
 	gomake
 	gomake install
 
 Or you can install the package via goinstall
 
-	goinstall github.com/iNamik/parser.go
+	goinstall github.com/iNamik/go_parser
 
 
 DEPENDENCIES
 ------------
 
-parser.go depends on the iNamik container.go queue package and the iNamik lexer.go package:
+go_parser depends on the iNamik go_container queue package and the iNamik go_lexer package:
 
-* https://github.com/iNamik/lexer.go
-* https://github.com/iNamik/container.go
+* https://github.com/iNamik/go_lexer
+* https://github.com/iNamik/go_container
 
 
 AUTHORS

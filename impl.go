@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/iNamik/lexer.go"
+import "github.com/iNamik/go_lexer"
 
 /**
  * Parser::Nextn - Returns the next emit from the parser.

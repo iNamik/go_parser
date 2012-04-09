@@ -37,8 +37,8 @@ import (
 	"strconv"
 	"bufio"
 	"fmt"
-	"github.com/iNamik/lexer.go"
-	"github.com/iNamik/parser.go"
+	"github.com/iNamik/go_lexer"
+	"github.com/iNamik/go_parser"
 )
 
 // We define our lexer tokens starting from the pre-defined EOF token
