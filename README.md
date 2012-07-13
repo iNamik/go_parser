@@ -97,12 +97,14 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	package main
 
 	import (
-		"os"
+		"bufio"
 		"bytes"
+		"fmt"
+		"os"
 		"strings"
 		"strconv"
-		"bufio"
-		"fmt"
+	)
+	import (
 		"github.com/iNamik/go_lexer"
 		"github.com/iNamik/go_parser"
 	)
@@ -146,7 +148,9 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 			input, _, err := stdin.ReadLine()
 
 			// Error? we're done
-			if nil != err { break }
+			if nil != err {
+				break
+			}
 
 			// Anything to process?
 			if len(input) > 0 {
@@ -227,16 +231,25 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 				val, ok := pGeneralExpression(p)
 
 				if ok {
-					id := string(tId.Bytes())
-					vars[id] = val
-
+					t := p.NextToken()
+					if t.Type() != T_EOF {
+							printError(t.Column(), "Expecting operator")
+					} else {
+						id := string(tId.Bytes())
+						vars[id] = val
+					}
 				}
 			// General expression
 			} else {
 				val, ok := pGeneralExpression(p)
 
 				if ok {
-					p.Emit(val)
+					t := p.NextToken()
+					if t.Type() != T_EOF {
+							printError(t.Column(), "Expecting operator")
+					} else {
+						p.Emit(val)
+					}
 				}
 			}
 		}
@@ -274,15 +287,10 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 						f -= r
 					}
 
-				// EOF
-				case T_EOF :
+				// Unknown - Send it back upstream
+				default :
 					p.BackupToken()
 					ok = true
-
-				// Unknown
-				default :
-					printError(t.Column(), "Expecting operator")
-					ok = false
 			}
 		}
 
@@ -325,7 +333,7 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	// pOperand parses [ id | number | '(' expression ')' ]
 	func pOperand (p parser.Parser) (f float64, ok bool) {
 
-		var err os.Error
+		var err error
 
 		m := p.Marker()
 		t := p.NextToken()
@@ -343,10 +351,10 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 
 			// Number
 			case T_NUMBER :
-				f, err = strconv.Atof64( string( t.Bytes() ) )
+				f, err = strconv.ParseFloat(string(t.Bytes()), 64)
 				ok = nil == err
 				if !ok {
-					printError(t.Column(), fmt.Sprint("Error reading number: ",err.String()))
+					printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
 					f = 0.0
 				}
 
@@ -386,6 +394,7 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	func printError(col int, msg string) {
 		fmt.Print(strings.Repeat(" ", col-1), "^ ", msg, "\n")
 	}
+
 
 
 INSTALL

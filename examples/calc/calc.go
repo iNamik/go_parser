@@ -31,12 +31,14 @@
 package main
 
 import (
-	"os"
+	"bufio"
 	"bytes"
+	"fmt"
+	"os"
 	"strings"
 	"strconv"
-	"bufio"
-	"fmt"
+)
+import (
 	"github.com/iNamik/go_lexer"
 	"github.com/iNamik/go_parser"
 )
@@ -80,7 +82,9 @@ func main() {
 		input, _, err := stdin.ReadLine()
 
 		// Error? we're done
-		if nil != err { break }
+		if nil != err {
+			break
+		}
 
 		// Anything to process?
 		if len(input) > 0 {
@@ -161,16 +165,25 @@ func parse(p parser.Parser) parser.StateFn {
 			val, ok := pGeneralExpression(p)
 
 			if ok {
-				id := string(tId.Bytes())
-				vars[id] = val
-
+				t := p.NextToken()
+				if t.Type() != T_EOF {
+						printError(t.Column(), "Expecting operator")
+				} else {
+					id := string(tId.Bytes())
+					vars[id] = val
+				}
 			}
 		// General expression
 		} else {
 			val, ok := pGeneralExpression(p)
 
 			if ok {
-				p.Emit(val)
+				t := p.NextToken()
+				if t.Type() != T_EOF {
+						printError(t.Column(), "Expecting operator")
+				} else {
+					p.Emit(val)
+				}
 			}
 		}
 	}
@@ -208,15 +221,10 @@ func pAdditiveExpression(p parser.Parser) (f float64, ok bool) {
 					f -= r
 				}
 
-			// EOF
-			case T_EOF :
+			// Unknown - Send it back upstream
+			default :
 				p.BackupToken()
 				ok = true
-
-			// Unknown
-			default :
-				printError(t.Column(), "Expecting operator")
-				ok = false
 		}
 	}
 
@@ -259,7 +267,7 @@ func pMultiplicitiveExpression(p parser.Parser) (f float64, ok bool) {
 // pOperand parses [ id | number | '(' expression ')' ]
 func pOperand (p parser.Parser) (f float64, ok bool) {
 
-	var err os.Error
+	var err error
 
 	m := p.Marker()
 	t := p.NextToken()
@@ -277,10 +285,10 @@ func pOperand (p parser.Parser) (f float64, ok bool) {
 
 		// Number
 		case T_NUMBER :
-			f, err = strconv.Atof64( string( t.Bytes() ) )
+			f, err = strconv.ParseFloat(string(t.Bytes()), 64)
 			ok = nil == err
 			if !ok {
-				printError(t.Column(), fmt.Sprint("Error reading number: ",err.String()))
+				printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
 				f = 0.0
 			}
 

@@ -64,7 +64,7 @@ func NewParser(startState StateFn, lex lexer.Lexer, channelCap int) Parser {
 		eofToken: nil,
 		eof     : false,
 		state   : startState,
-		chn : make(chan interface{}, channelCap),
+		chn     : make(chan interface{}, channelCap),
 	}
 	return p
 }
