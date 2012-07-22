@@ -18,7 +18,7 @@
 //	digit:
 //		['0'..'9']
 //	id:
-//		alpha ( alpa | digit )*
+//		alpha ( alpha | digit )*
 //	alpha:
 //		['a'..'z'] | ['A'..'Z']
 //
