@@ -1,20 +1,22 @@
 package parser
 
-import "github.com/iNamik/go_lexer"
-import "github.com/iNamik/go_container/queue"
+import (
+	"github.com/iNamik/go_container/queue"
+	"github.com/iNamik/go_lexer"
+)
 
 type parser struct {
-	lex       lexer.Lexer
-	tokens    queue.Interface
-	pos       int
-	sequence  int
-	eof       bool
+	lex      lexer.Lexer
+	tokens   queue.Interface
+	pos      int
+	sequence int
+	eof      bool
 	eofToken *lexer.Token
-	state     StateFn
-	chn       chan interface{} // channel of objects
+	state    StateFn
+	chn      chan interface{} // channel of objects
 }
 
-func (p *parser) ensureTokenLen(n int) bool{
+func (p *parser) ensureTokenLen(n int) bool {
 	for !p.eof && p.tokens.Len() < n {
 		token := p.lex.NextToken()
 		if token.EOF() {

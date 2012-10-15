@@ -22,7 +22,7 @@ type Parser interface {
 	PeekToken(int) *lexer.Token
 
 	// NextToken consumes and returns the next token
-	NextToken()    *lexer.Token
+	NextToken() *lexer.Token
 
 	// SkipToken consumes the next token without returning it
 	SkipToken()
@@ -31,7 +31,7 @@ type Parser interface {
 	SkipTokens(int)
 
 	// BackupToken un-consumes the last token
-	BackupToken ()
+	BackupToken()
 
 	// BackupTokens un-consumes the last n tokens
 	BackupTokens(int)
@@ -40,7 +40,7 @@ type Parser interface {
 	ClearTokens()
 
 	// Emit emits an object, consuming matched tokens
-	Emit (interface{})
+	Emit(interface{})
 
 	EOF() bool
 
@@ -54,18 +54,17 @@ type Parser interface {
 	Reset(*Marker)
 }
 
-// NewParser returns a new Parser object
-func NewParser(startState StateFn, lex lexer.Lexer, channelCap int) Parser {
+// New returns a new Parser object
+func New(startState StateFn, lex lexer.Lexer, channelCap int) Parser {
 	p := &parser{
-		lex     : lex,
-		tokens  : queue.NewQueue(4),
-		pos     : 0,
+		lex:      lex,
+		tokens:   queue.New(4), // 4 is just a nice number that seems appropriate
+		pos:      0,
 		sequence: 0,
 		eofToken: nil,
-		eof     : false,
-		state   : startState,
-		chn     : make(chan interface{}, channelCap),
+		eof:      false,
+		state:    startState,
+		chn:      make(chan interface{}, channelCap),
 	}
 	return p
 }
-

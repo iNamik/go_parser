@@ -26,7 +26,7 @@ Below is the interface for the main Parser type:
 		PeekToken(int) *lexer.Token
 
 		// NextToken consumes and returns the next token
-		NextToken()    *lexer.Token
+		NextToken() *lexer.Token
 
 		// SkipToken consumes the next token without returning it
 		SkipToken()
@@ -35,7 +35,7 @@ Below is the interface for the main Parser type:
 		SkipTokens(int)
 
 		// BackupToken un-consumes the last token
-		BackupToken ()
+		BackupToken()
 
 		// BackupTokens un-consumes the last n tokens
 		BackupTokens(int)
@@ -44,7 +44,7 @@ Below is the interface for the main Parser type:
 		ClearTokens()
 
 		// Emit emits an object, consuming matched tokens
-		Emit (interface{})
+		Emit(interface{})
 
 		EOF() bool
 
@@ -84,7 +84,7 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	//	digit:
 	//		['0'..'9']
 	//	id:
-	//		alpha ( alpa | digit )*
+	//		alpha ( alpha | digit )*
 	//	alpha:
 	//		['a'..'z'] | ['A'..'Z']
 	//
@@ -101,18 +101,19 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 		"bytes"
 		"fmt"
 		"os"
-		"strings"
 		"strconv"
+		"strings"
 	)
 	import (
 		"github.com/iNamik/go_lexer"
+		"github.com/iNamik/go_lexer/rangeutil"
 		"github.com/iNamik/go_parser"
 	)
 
 	// We define our lexer tokens starting from the pre-defined EOF token
 	const (
-		T_EOF   lexer.TokenType = lexer.TokenTypeEOF
-		T_NIL                   = lexer.TokenTypeEOF + iota
+		T_EOF lexer.TokenType = lexer.TokenTypeEOF
+		T_NIL                 = lexer.TokenTypeEOF + iota
 		T_ID
 		T_NUMBER
 		T_PLUS
@@ -125,21 +126,24 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	)
 
 	// To store variables
-	var vars = map[string] float64 {}
+	var vars = map[string]float64{}
 
 	// Single-character tokens
-	var singleChars  = []byte            { '+'   , '-'    , '*'       , '/'     , '='     , '('         , ')'           }
-	var singleTokens = []lexer.TokenType { T_PLUS, T_MINUS, T_MULTIPLY, T_DIVIDE, T_EQUALS, T_OPEN_PAREN, T_CLOSE_PAREN }
+	var singleChars = []byte{'+', '-', '*', '/', '=', '(', ')'}
+
+	var singleTokens = []lexer.TokenType{T_PLUS, T_MINUS, T_MULTIPLY, T_DIVIDE, T_EQUALS, T_OPEN_PAREN, T_CLOSE_PAREN}
 
 	// Multi-character tokens
-	var rangeWhitespace = []byte { ' ', '\t' }
-	var rangeDigits     = lexer.RangeToBytes("0-9")
-	var rangeAlpha      = lexer.RangeToBytes("a-zA-Z")
-	var rangeAlphaNum   = lexer.RangeToBytes("0-9a-zA-Z")
+	var bytesWhitespace = []byte{' ', '\t'}
+
+	var bytesDigits = rangeutil.RangeToBytes("0-9")
+
+	var bytesAlpha = rangeutil.RangeToBytes("a-zA-Z")
+
+	var bytesAlphaNum = rangeutil.RangeToBytes("0-9a-zA-Z")
 
 	// main
 	func main() {
-
 		// Create a buffered reader from STDIN
 		stdin := bufio.NewReader(os.Stdin)
 
@@ -155,13 +159,13 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 			// Anything to process?
 			if len(input) > 0 {
 				// Create a new lexer to turn the input text into tokens
-				l := lexer.NewLexer(lex, strings.NewReader(string(input)), len(input), 2)
+				l := lexer.New(lex, strings.NewReader(string(input)), len(input), 2)
 
 				// Create a new parser that feeds off the lexer and generates expression values
-				p := parser.NewParser(parse, l, 2)
+				p := parser.New(parse, l, 2)
 
 				// Loop over parser emits
-				for i := p.Next() ; nil != i ; i = p.Next() {
+				for i := p.Next(); nil != i; i = p.Next() {
 					fmt.Printf("%v\n", i)
 				}
 			}
@@ -178,7 +182,7 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 		}
 
 		// Single-char token?
-		if i := bytes.IndexRune(singleChars, l.PeekRune(0)) ; i >= 0 {
+		if i := bytes.IndexRune(singleChars, l.PeekRune(0)); i >= 0 {
 			l.NextRune()
 			l.EmitToken(singleTokens[i])
 			return lex
@@ -186,31 +190,31 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 
 		switch {
 
-			// Skip whitespace
-			case l.MatchOneOrMore(rangeWhitespace) :
-				l.IgnoreToken()
+		// Skip whitespace
+		case l.MatchOneOrMoreBytes(bytesWhitespace):
+			l.IgnoreToken()
 
-			// Number
-			case l.MatchOneOrMore(rangeDigits) :
-				if l.PeekRune(0) == '.' {
-					l.NextRune() // skip '.'
-					if ! l.MatchOneOrMore(rangeDigits) {
-						printError(l.Column(), "Illegal number format - Missing digits after '.'")
-						l.IgnoreToken()
-						break
-					}
+		// Number
+		case l.MatchOneOrMoreBytes(bytesDigits):
+			if l.PeekRune(0) == '.' {
+				l.NextRune() // skip '.'
+				if !l.MatchOneOrMoreBytes(bytesDigits) {
+					printError(l.Column(), "Illegal number format - Missing digits after '.'")
+					l.IgnoreToken()
+					break
 				}
-				l.EmitTokenWithBytes(T_NUMBER)
+			}
+			l.EmitTokenWithBytes(T_NUMBER)
 
-			// ID
-			case l.MatchOne(rangeAlpha) && l.MatchNoneOrMore(rangeAlphaNum):
-				l.EmitTokenWithBytes(T_ID)
+		// ID
+		case l.MatchOneBytes(bytesAlpha) && l.MatchZeroOrMoreBytes(bytesAlphaNum):
+			l.EmitTokenWithBytes(T_ID)
 
-			// Unknown
-			default :
-				l.NextRune()
-				printError(l.Column(), "Unknown Character")
-				l.IgnoreToken()
+		// Unknown
+		default:
+			l.NextRune()
+			printError(l.Column(), "Unknown Character")
+			l.IgnoreToken()
 		}
 
 		// See you again soon!
@@ -233,20 +237,20 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 				if ok {
 					t := p.NextToken()
 					if t.Type() != T_EOF {
-							printError(t.Column(), "Expecting operator")
+						printError(t.Column(), "Expecting operator")
 					} else {
 						id := string(tId.Bytes())
 						vars[id] = val
 					}
 				}
-			// General expression
+				// General expression
 			} else {
 				val, ok := pGeneralExpression(p)
 
 				if ok {
 					t := p.NextToken()
 					if t.Type() != T_EOF {
-							printError(t.Column(), "Expecting operator")
+						printError(t.Column(), "Expecting operator")
 					} else {
 						p.Emit(val)
 					}
@@ -262,7 +266,9 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 
 	// pGeneralExpression is the starting point for parsing a General Expression.
 	// It is basically a pass-through to pAdditiveExpression, but it feels cleaner
-	func pGeneralExpression(p parser.Parser) (f float64, ok bool) { return pAdditiveExpression(p) }
+	func pGeneralExpression(p parser.Parser) (f float64, ok bool) {
+		return pAdditiveExpression(p)
+	}
 
 	// pAdditiveExpression parses [ expression ( ( '+' | '-' ) expression )? ]
 	func pAdditiveExpression(p parser.Parser) (f float64, ok bool) {
@@ -273,24 +279,24 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 			t := p.NextToken()
 			switch t.Type() {
 
-				// Add (+)
-				case T_PLUS :
-					r, ok := pAdditiveExpression(p)
-					if ok {
-						f += r
-					}
+			// Add (+)
+			case T_PLUS:
+				r, ok := pAdditiveExpression(p)
+				if ok {
+					f += r
+				}
 
-				// Subtract (-)
-				case T_MINUS :
-					r, ok := pAdditiveExpression(p)
-					if ok {
-						f -= r
-					}
+			// Subtract (-)
+			case T_MINUS:
+				r, ok := pAdditiveExpression(p)
+				if ok {
+					f -= r
+				}
 
-				// Unknown - Send it back upstream
-				default :
-					p.BackupToken()
-					ok = true
+			// Unknown - Send it back upstream
+			default:
+				p.BackupToken()
+				ok = true
 			}
 		}
 
@@ -299,31 +305,30 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 
 	// pMultiplicitiveExpression parses [ expression ( ( '*' | '/' ) expression )? ]
 	func pMultiplicitiveExpression(p parser.Parser) (f float64, ok bool) {
-
 		f, ok = pOperand(p)
 
 		if ok {
 			t := p.NextToken()
 			switch t.Type() {
 
-				// Multiply (*)
-				case T_MULTIPLY :
-					r, ok := pMultiplicitiveExpression(p)
-					if ok {
-						f *= r
-					}
+			// Multiply (*)
+			case T_MULTIPLY:
+				r, ok := pMultiplicitiveExpression(p)
+				if ok {
+					f *= r
+				}
 
-				// Divide (/)
-				case T_DIVIDE :
-					r, ok := pMultiplicitiveExpression(p)
-					if ok {
-						f /= r
-					}
+			// Divide (/)
+			case T_DIVIDE:
+				r, ok := pMultiplicitiveExpression(p)
+				if ok {
+					f /= r
+				}
 
-				// Unknown - Send it back upstream
-				default :
-					p.BackupToken()
-					ok = true
+			// Unknown - Send it back upstream
+			default:
+				p.BackupToken()
+				ok = true
 			}
 		}
 
@@ -331,8 +336,7 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	}
 
 	// pOperand parses [ id | number | '(' expression ')' ]
-	func pOperand (p parser.Parser) (f float64, ok bool) {
-
+	func pOperand(p parser.Parser) (f float64, ok bool) {
 		var err error
 
 		m := p.Marker()
@@ -340,47 +344,47 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 
 		switch t.Type() {
 
-			// ID
-			case T_ID :
-				var id = string( t.Bytes() )
-				f, ok = vars[ id ]
-				if !ok {
-					printError(t.Column(), fmt.Sprint("id '",id,"' not defined"))
+		// ID
+		case T_ID:
+			var id = string(t.Bytes())
+			f, ok = vars[id]
+			if !ok {
+				printError(t.Column(), fmt.Sprint("id '", id, "' not defined"))
+				f = 0.0
+			}
+
+		// Number
+		case T_NUMBER:
+			f, err = strconv.ParseFloat(string(t.Bytes()), 64)
+			ok = nil == err
+			if !ok {
+				printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
+				f = 0.0
+			}
+
+		// '(' Expresson ')'
+		case T_OPEN_PAREN:
+			f, ok = pGeneralExpression(p)
+			if ok {
+				t2 := p.NextToken()
+				if t2.Type() != T_CLOSE_PAREN {
+					printError(t.Column(), "Unbalanced Paren")
+					ok = false
 					f = 0.0
 				}
+			}
 
-			// Number
-			case T_NUMBER :
-				f, err = strconv.ParseFloat(string(t.Bytes()), 64)
-				ok = nil == err
-				if !ok {
-					printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
-					f = 0.0
-				}
+		// EOF
+		case T_EOF:
+			printError(t.Column(), "Unexpected EOF - Expecting operand")
+			ok = false
+			f = 0.0
 
-			// '(' Expresson ')'
-			case T_OPEN_PAREN :
-				f, ok = pGeneralExpression(p)
-				if ok {
-					t2 := p.NextToken()
-					if t2.Type() != T_CLOSE_PAREN {
-						printError(t.Column(), "Unbalanced Paren")
-						ok = false
-						f = 0.0
-					}
-				}
-
-			// EOF
-			case T_EOF:
-				printError(t.Column(), "Unexpected EOF - Expecting operand")
-				ok = false
-				f = 0.0
-
-			// Unknown
-			default:
-				printError(t.Column(), "Expecting operand")
-				ok = false
-				f = 0.0
+		// Unknown
+		default:
+			printError(t.Column(), "Expecting operand")
+			ok = false
+			f = 0.0
 		}
 
 		if !ok {
@@ -396,20 +400,13 @@ Below is a sample calculator program that uses the parser (and lexer) API:
 	}
 
 
-
 INSTALL
 -------
 
-To install the package manually
+The package is built using the Go tool.  Assuming you have correctly set the
+$GOPATH variable, you can run the folloing command:
 
-	git clone https://github.com/iNamik/go_parser
-	cd go_parser
-	gomake
-	gomake install
-
-Or you can install the package via goinstall
-
-	goinstall github.com/iNamik/go_parser
+	go get github.com/iNamik/go_parser
 
 
 DEPENDENCIES

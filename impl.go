@@ -2,94 +2,82 @@ package parser
 
 import "github.com/iNamik/go_lexer"
 
-/**
- * Parser::Nextn - Returns the next emit from the parser.
- */
+//  Parser::Next - Returns the next emit from the parser.
 func (p *parser) Next() interface{} {
 	for {
 		select {
-			case i := <- p.chn :
-				return i
-			default:
-				p.state = p.state(p)
+		case i := <-p.chn:
+			return i
+		default:
+			p.state = p.state(p)
 		}
 	}
 	panic("not reached")
 }
 
-/**
- * Parser::PeekTokenType
- */
+// Parser::PeekTokenType
 func (p *parser) PeekTokenType(n int) lexer.TokenType {
-	return p.PeekToken(n).Type();
+	return p.PeekToken(n).Type()
 }
 
-/**
- * Parser::PeekToken
- */
+// Parser::PeekToken
 func (p *parser) PeekToken(n int) *lexer.Token {
-	ok := p.ensureTokenLen( p.pos + n + 1 ) // Correct for 0-based 'n'
+	ok := p.ensureTokenLen(p.pos + n + 1) // Correct for 0-based 'n'
 
 	if !ok {
-		if nil == p.eofToken { panic("illegal state: eofToken is nil") }
+		if nil == p.eofToken {
+			panic("illegal state: eofToken is nil")
+		}
 		return p.eofToken
 	}
 
-	i := p.tokens.Peek( p.pos + n )
+	i := p.tokens.Peek(p.pos + n)
 
 	return i.(*lexer.Token)
 }
 
-/**
- * Parser::NextToken
- */
+// Parser::NextToken
 func (p *parser) NextToken() *lexer.Token {
-	ok := p.ensureTokenLen( p.pos + 1 )
+	ok := p.ensureTokenLen(p.pos + 1)
 
 	if !ok {
-		if nil == p.eofToken { panic("illegal state: eofToken is nil") }
+		if nil == p.eofToken {
+			panic("illegal state: eofToken is nil")
+		}
 		return p.eofToken
 	}
 
-	i := p.tokens.Peek( p.pos ) // 0-based
+	i := p.tokens.Peek(p.pos) // 0-based
 
 	p.pos++
 
 	return i.(*lexer.Token)
 }
 
-/**
- * Parser::SkipToken
- */
+// Parser::SkipToken
 func (p *parser) SkipToken() {
-	ok := p.ensureTokenLen( p.pos + 1 )
+	ok := p.ensureTokenLen(p.pos + 1)
 
 	if ok {
 		p.pos++
 	}
 }
 
-/**
- * Parser::SkipTokens
- */
+// Parser::SkipTokens
 func (p *parser) SkipTokens(n int) {
-	ok := p.ensureTokenLen( p.pos + n + 1 )
+	ok := p.ensureTokenLen(p.pos + n + 1)
 
 	if ok {
 		p.pos += n
 	}
 }
 
-/**
- * Parser::BackupToken
- */
+// Parser::BackupToken
 func (p *parser) BackupToken() {
 	p.BackupTokens(1)
 }
 
-/**
- * Parser::BackupTokens
- */
+// Parser::BackupTokens
 func (p *parser) BackupTokens(n int) {
 	if n > p.pos {
 		panic("Underflow Exception")
@@ -97,41 +85,31 @@ func (p *parser) BackupTokens(n int) {
 	p.pos -= n
 }
 
-/**
- * Parser::ClearTokens
- */
+// Parser::ClearTokens
 func (p *parser) ClearTokens() {
-	for ; p.pos > 0 ; p.pos-- {
+	for ; p.pos > 0; p.pos-- {
 		p.tokens.Remove()
 	}
 }
 
-/**
- * Parser::Emit
- */
+// Parser::Emit
 func (p *parser) Emit(i interface{}) {
 	p.chn <- i
 }
 
-/**
- * Parser::EOF
- */
+// Parser::EOF
 func (p *parser) EOF() bool {
 	return p.eof
 }
 
-/**
- * Parser::Marker
- */
-func (p * parser) Marker() *Marker {
+// Parser::Marker
+func (p *parser) Marker() *Marker {
 	return &Marker{sequence: p.sequence, pos: p.pos}
 }
 
-/**
- * Parser::Reset
- */
+// Parser::Reset
 func (p *parser) Reset(m *Marker) {
-	if (m.sequence != p.sequence || m.pos < 0 || m.pos >= p.tokens.Len()) {
+	if m.sequence != p.sequence || m.pos < 0 || m.pos >= p.tokens.Len() {
 		panic("Invalid marker")
 	}
 	p.pos = m.pos

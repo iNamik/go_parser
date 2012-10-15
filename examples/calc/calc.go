@@ -35,18 +35,19 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 )
 import (
 	"github.com/iNamik/go_lexer"
+	"github.com/iNamik/go_lexer/rangeutil"
 	"github.com/iNamik/go_parser"
 )
 
 // We define our lexer tokens starting from the pre-defined EOF token
 const (
-	T_EOF   lexer.TokenType = lexer.TokenTypeEOF
-	T_NIL                   = lexer.TokenTypeEOF + iota
+	T_EOF lexer.TokenType = lexer.TokenTypeEOF
+	T_NIL                 = lexer.TokenTypeEOF + iota
 	T_ID
 	T_NUMBER
 	T_PLUS
@@ -59,21 +60,24 @@ const (
 )
 
 // To store variables
-var vars = map[string] float64 {}
+var vars = map[string]float64{}
 
 // Single-character tokens
-var singleChars  = []byte            { '+'   , '-'    , '*'       , '/'     , '='     , '('         , ')'           }
-var singleTokens = []lexer.TokenType { T_PLUS, T_MINUS, T_MULTIPLY, T_DIVIDE, T_EQUALS, T_OPEN_PAREN, T_CLOSE_PAREN }
+var singleChars = []byte{'+', '-', '*', '/', '=', '(', ')'}
+
+var singleTokens = []lexer.TokenType{T_PLUS, T_MINUS, T_MULTIPLY, T_DIVIDE, T_EQUALS, T_OPEN_PAREN, T_CLOSE_PAREN}
 
 // Multi-character tokens
-var rangeWhitespace = []byte { ' ', '\t' }
-var rangeDigits     = lexer.RangeToBytes("0-9")
-var rangeAlpha      = lexer.RangeToBytes("a-zA-Z")
-var rangeAlphaNum   = lexer.RangeToBytes("0-9a-zA-Z")
+var bytesWhitespace = []byte{' ', '\t'}
+
+var bytesDigits = rangeutil.RangeToBytes("0-9")
+
+var bytesAlpha = rangeutil.RangeToBytes("a-zA-Z")
+
+var bytesAlphaNum = rangeutil.RangeToBytes("0-9a-zA-Z")
 
 // main
 func main() {
-
 	// Create a buffered reader from STDIN
 	stdin := bufio.NewReader(os.Stdin)
 
@@ -89,13 +93,13 @@ func main() {
 		// Anything to process?
 		if len(input) > 0 {
 			// Create a new lexer to turn the input text into tokens
-			l := lexer.NewLexer(lex, strings.NewReader(string(input)), len(input), 2)
+			l := lexer.New(lex, strings.NewReader(string(input)), len(input), 2)
 
 			// Create a new parser that feeds off the lexer and generates expression values
-			p := parser.NewParser(parse, l, 2)
+			p := parser.New(parse, l, 2)
 
 			// Loop over parser emits
-			for i := p.Next() ; nil != i ; i = p.Next() {
+			for i := p.Next(); nil != i; i = p.Next() {
 				fmt.Printf("%v\n", i)
 			}
 		}
@@ -112,7 +116,7 @@ func lex(l lexer.Lexer) lexer.StateFn {
 	}
 
 	// Single-char token?
-	if i := bytes.IndexRune(singleChars, l.PeekRune(0)) ; i >= 0 {
+	if i := bytes.IndexRune(singleChars, l.PeekRune(0)); i >= 0 {
 		l.NextRune()
 		l.EmitToken(singleTokens[i])
 		return lex
@@ -120,31 +124,31 @@ func lex(l lexer.Lexer) lexer.StateFn {
 
 	switch {
 
-		// Skip whitespace
-		case l.MatchOneOrMore(rangeWhitespace) :
-			l.IgnoreToken()
+	// Skip whitespace
+	case l.MatchOneOrMoreBytes(bytesWhitespace):
+		l.IgnoreToken()
 
-		// Number
-		case l.MatchOneOrMore(rangeDigits) :
-			if l.PeekRune(0) == '.' {
-				l.NextRune() // skip '.'
-				if ! l.MatchOneOrMore(rangeDigits) {
-					printError(l.Column(), "Illegal number format - Missing digits after '.'")
-					l.IgnoreToken()
-					break
-				}
+	// Number
+	case l.MatchOneOrMoreBytes(bytesDigits):
+		if l.PeekRune(0) == '.' {
+			l.NextRune() // skip '.'
+			if !l.MatchOneOrMoreBytes(bytesDigits) {
+				printError(l.Column(), "Illegal number format - Missing digits after '.'")
+				l.IgnoreToken()
+				break
 			}
-			l.EmitTokenWithBytes(T_NUMBER)
+		}
+		l.EmitTokenWithBytes(T_NUMBER)
 
-		// ID
-		case l.MatchOne(rangeAlpha) && l.MatchNoneOrMore(rangeAlphaNum):
-			l.EmitTokenWithBytes(T_ID)
+	// ID
+	case l.MatchOneBytes(bytesAlpha) && l.MatchZeroOrMoreBytes(bytesAlphaNum):
+		l.EmitTokenWithBytes(T_ID)
 
-		// Unknown
-		default :
-			l.NextRune()
-			printError(l.Column(), "Unknown Character")
-			l.IgnoreToken()
+	// Unknown
+	default:
+		l.NextRune()
+		printError(l.Column(), "Unknown Character")
+		l.IgnoreToken()
 	}
 
 	// See you again soon!
@@ -167,20 +171,20 @@ func parse(p parser.Parser) parser.StateFn {
 			if ok {
 				t := p.NextToken()
 				if t.Type() != T_EOF {
-						printError(t.Column(), "Expecting operator")
+					printError(t.Column(), "Expecting operator")
 				} else {
 					id := string(tId.Bytes())
 					vars[id] = val
 				}
 			}
-		// General expression
+			// General expression
 		} else {
 			val, ok := pGeneralExpression(p)
 
 			if ok {
 				t := p.NextToken()
 				if t.Type() != T_EOF {
-						printError(t.Column(), "Expecting operator")
+					printError(t.Column(), "Expecting operator")
 				} else {
 					p.Emit(val)
 				}
@@ -196,7 +200,9 @@ func parse(p parser.Parser) parser.StateFn {
 
 // pGeneralExpression is the starting point for parsing a General Expression.
 // It is basically a pass-through to pAdditiveExpression, but it feels cleaner
-func pGeneralExpression(p parser.Parser) (f float64, ok bool) { return pAdditiveExpression(p) }
+func pGeneralExpression(p parser.Parser) (f float64, ok bool) {
+	return pAdditiveExpression(p)
+}
 
 // pAdditiveExpression parses [ expression ( ( '+' | '-' ) expression )? ]
 func pAdditiveExpression(p parser.Parser) (f float64, ok bool) {
@@ -207,24 +213,24 @@ func pAdditiveExpression(p parser.Parser) (f float64, ok bool) {
 		t := p.NextToken()
 		switch t.Type() {
 
-			// Add (+)
-			case T_PLUS :
-				r, ok := pAdditiveExpression(p)
-				if ok {
-					f += r
-				}
+		// Add (+)
+		case T_PLUS:
+			r, ok := pAdditiveExpression(p)
+			if ok {
+				f += r
+			}
 
-			// Subtract (-)
-			case T_MINUS :
-				r, ok := pAdditiveExpression(p)
-				if ok {
-					f -= r
-				}
+		// Subtract (-)
+		case T_MINUS:
+			r, ok := pAdditiveExpression(p)
+			if ok {
+				f -= r
+			}
 
-			// Unknown - Send it back upstream
-			default :
-				p.BackupToken()
-				ok = true
+		// Unknown - Send it back upstream
+		default:
+			p.BackupToken()
+			ok = true
 		}
 	}
 
@@ -233,31 +239,30 @@ func pAdditiveExpression(p parser.Parser) (f float64, ok bool) {
 
 // pMultiplicitiveExpression parses [ expression ( ( '*' | '/' ) expression )? ]
 func pMultiplicitiveExpression(p parser.Parser) (f float64, ok bool) {
-
 	f, ok = pOperand(p)
 
 	if ok {
 		t := p.NextToken()
 		switch t.Type() {
 
-			// Multiply (*)
-			case T_MULTIPLY :
-				r, ok := pMultiplicitiveExpression(p)
-				if ok {
-					f *= r
-				}
+		// Multiply (*)
+		case T_MULTIPLY:
+			r, ok := pMultiplicitiveExpression(p)
+			if ok {
+				f *= r
+			}
 
-			// Divide (/)
-			case T_DIVIDE :
-				r, ok := pMultiplicitiveExpression(p)
-				if ok {
-					f /= r
-				}
+		// Divide (/)
+		case T_DIVIDE:
+			r, ok := pMultiplicitiveExpression(p)
+			if ok {
+				f /= r
+			}
 
-			// Unknown - Send it back upstream
-			default :
-				p.BackupToken()
-				ok = true
+		// Unknown - Send it back upstream
+		default:
+			p.BackupToken()
+			ok = true
 		}
 	}
 
@@ -265,8 +270,7 @@ func pMultiplicitiveExpression(p parser.Parser) (f float64, ok bool) {
 }
 
 // pOperand parses [ id | number | '(' expression ')' ]
-func pOperand (p parser.Parser) (f float64, ok bool) {
-
+func pOperand(p parser.Parser) (f float64, ok bool) {
 	var err error
 
 	m := p.Marker()
@@ -274,47 +278,47 @@ func pOperand (p parser.Parser) (f float64, ok bool) {
 
 	switch t.Type() {
 
-		// ID
-		case T_ID :
-			var id = string( t.Bytes() )
-			f, ok = vars[ id ]
-			if !ok {
-				printError(t.Column(), fmt.Sprint("id '",id,"' not defined"))
+	// ID
+	case T_ID:
+		var id = string(t.Bytes())
+		f, ok = vars[id]
+		if !ok {
+			printError(t.Column(), fmt.Sprint("id '", id, "' not defined"))
+			f = 0.0
+		}
+
+	// Number
+	case T_NUMBER:
+		f, err = strconv.ParseFloat(string(t.Bytes()), 64)
+		ok = nil == err
+		if !ok {
+			printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
+			f = 0.0
+		}
+
+	// '(' Expresson ')'
+	case T_OPEN_PAREN:
+		f, ok = pGeneralExpression(p)
+		if ok {
+			t2 := p.NextToken()
+			if t2.Type() != T_CLOSE_PAREN {
+				printError(t.Column(), "Unbalanced Paren")
+				ok = false
 				f = 0.0
 			}
+		}
 
-		// Number
-		case T_NUMBER :
-			f, err = strconv.ParseFloat(string(t.Bytes()), 64)
-			ok = nil == err
-			if !ok {
-				printError(t.Column(), fmt.Sprint("Error reading number: ", err.Error()))
-				f = 0.0
-			}
+	// EOF
+	case T_EOF:
+		printError(t.Column(), "Unexpected EOF - Expecting operand")
+		ok = false
+		f = 0.0
 
-		// '(' Expresson ')'
-		case T_OPEN_PAREN :
-			f, ok = pGeneralExpression(p)
-			if ok {
-				t2 := p.NextToken()
-				if t2.Type() != T_CLOSE_PAREN {
-					printError(t.Column(), "Unbalanced Paren")
-					ok = false
-					f = 0.0
-				}
-			}
-
-		// EOF
-		case T_EOF:
-			printError(t.Column(), "Unexpected EOF - Expecting operand")
-			ok = false
-			f = 0.0
-
-		// Unknown
-		default:
-			printError(t.Column(), "Expecting operand")
-			ok = false
-			f = 0.0
+	// Unknown
+	default:
+		printError(t.Column(), "Expecting operand")
+		ok = false
+		f = 0.0
 	}
 
 	if !ok {
@@ -328,4 +332,3 @@ func pOperand (p parser.Parser) (f float64, ok bool) {
 func printError(col int, msg string) {
 	fmt.Print(strings.Repeat(" ", col-1), "^ ", msg, "\n")
 }
-
