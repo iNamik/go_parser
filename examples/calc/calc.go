@@ -93,7 +93,7 @@ func main() {
 		// Anything to process?
 		if len(input) > 0 {
 			// Create a new lexer to turn the input text into tokens
-			l := lexer.New(lex, strings.NewReader(string(input)), len(input), 2)
+			l := lexer.NewFromBytes(lex, input, 2)
 
 			// Create a new parser that feeds off the lexer and generates expression values
 			p := parser.New(parse, l, 2)
