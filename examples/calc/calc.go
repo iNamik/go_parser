@@ -46,8 +46,8 @@ import (
 
 // We define our lexer tokens starting from the pre-defined EOF token
 const (
-	T_EOF lexer.TokenType = lexer.TokenTypeEOF
-	T_NIL                 = lexer.TokenTypeEOF + iota
+	T_EOF lexer.TokenType = lexer.T_EOF
+	T_NIL                 = lexer.T_EOF + iota
 	T_ID
 	T_NUMBER
 	T_PLUS
