@@ -15,6 +15,12 @@ type Marker struct {
 // Parser helps you process lexer tokens
 type Parser interface {
 
+	// Line returns the line number of the next token (aka PeekTotenType(0).Line() )
+	Line() int
+
+	// Column returns the column number of the next token (aka PeekTokenType(0).column() )
+	Column() int
+
 	// PeekTokenType allows you to look ahead at tokens without consuming them
 	PeekTokenType(int) lexer.TokenType
 

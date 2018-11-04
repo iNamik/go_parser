@@ -2,6 +2,16 @@ package parser
 
 import "github.com/iNamik/go_lexer"
 
+// Parser::Line
+func (p *parser) Line() int {
+	return p.PeekToken(0).Line()
+}
+
+// Parser::Column
+func (p *parser) Column() int {
+	return p.PeekToken(0).Column()
+}
+
 //  Parser::Next - Returns the next emit from the parser.
 func (p *parser) Next() interface{} {
 	for {
